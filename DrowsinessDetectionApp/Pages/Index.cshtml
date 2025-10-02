@@ -4,7 +4,123 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container">
+        <h1 class="mb-4">🤖 AI-Enhanced Anti-Sleep Glasses</h1>
+        <p class="lead mb-4">Advanced drowsiness detection system using infrared sensors and machine learning to keep drivers safe on the road.</p>
+        <a href="/Dashboard" class="btn btn-primary btn-lg">Go to Dashboard</a>
+    </div>
+</div>
+
+<!-- How It Works -->
+<div class="how-it-works-section">
+    <div class="container mb-5">
+        <h2 class="text-center mb-5" style="font-size: 2.5rem; font-weight: 600; color: #1d1d1f;">How Our System Works</h2>
+        <div class="row">
+            <div class="col-md-3 text-center mb-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-eye fa-3x" style="color: #86868b;"></i>
+                </div>
+                <h4 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Infrared Eye Tracking</h4>
+                <p style="color: #86868b; line-height: 1.6;">Monitors blink patterns and eye closure duration using advanced IR sensors.</p>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-head-side-virus fa-3x" style="color: #86868b;"></i>
+                </div>
+                <h4 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Head Movement Detection</h4>
+                <p style="color: #86868b; line-height: 1.6;">Tracks head position and movement patterns using accelerometer and gyroscope.</p>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-brain fa-3x" style="color: #86868b;"></i>
+                </div>
+                <h4 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">AI Analysis</h4>
+                <p style="color: #86868b; line-height: 1.6;">Real-time drowsiness detection using machine learning algorithms.</p>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-bell fa-3x" style="color: #86868b;"></i>
+                </div>
+                <h4 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Instant Alerts</h4>
+                <p style="color: #86868b; line-height: 1.6;">Immediate warnings via buzzer, vibration, and dashboard notifications.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Usage Instructions -->
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h2 class="text-center mb-4" style="font-size: 2.5rem; font-weight: 600; color: #1d1d1f;">How to Use Your Anti-Sleep Glasses</h2>
+            <div class="card">
+                <div class="card-body" style="padding: 40px;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Step 1: Proper Fit</h5>
+                            <p style="color: #86868b; line-height: 1.6; margin-bottom: 24px;">Ensure the glasses fit comfortably on your face with sensors positioned correctly near your eyes.</p>
+
+                            <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Step 2: Calibration</h5>
+                            <p style="color: #86868b; line-height: 1.6;">Complete the initial sensor calibration process for accurate readings.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Step 3: Connection</h5>
+                            <p style="color: #86868b; line-height: 1.6; margin-bottom: 24px;">Pair your glasses with the dashboard system via Bluetooth/WiFi.</p>
+
+                            <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Step 4: Start Driving</h5>
+                            <p style="color: #86868b; line-height: 1.6;">Begin your journey with real-time monitoring and safety alerts.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features -->
+<div class="container mb-5">
+    <h2 class="text-center mb-4" style="font-size: 2.5rem; font-weight: 600; color: #1d1d1f;">Key Features</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 40px;">
+                    <i class="fas fa-chart-line fa-2x mb-3" style="color: #34C759;"></i>
+                    <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Real-time Monitoring</h5>
+                    <p style="color: #86868b; line-height: 1.6;">Continuous drowsiness detection with live dashboard updates.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 40px;">
+                    <i class="fas fa-download fa-2x mb-3" style="color: #5AC8FA;"></i>
+                    <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Session Logging</h5>
+                    <p style="color: #86868b; line-height: 1.6;">Export driving session data for analysis and compliance.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 40px;">
+                    <i class="fas fa-shield-alt fa-2x mb-3" style="color: #FF9500;"></i>
+                    <h5 style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Safety Alerts</h5>
+                    <p style="color: #86868b; line-height: 1.6;">Multiple alert systems to ensure driver awareness.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Getting Started -->
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+            <h2 class="mb-4" style="font-size: 2.5rem; font-weight: 600; color: #1d1d1f;">Ready to Get Started?</h2>
+            <p class="lead mb-4" style="color: #86868b; font-size: 1.25rem; line-height: 1.6;">Connect your Anti-Sleep Glasses and begin monitoring your driving safety in real-time.</p>
+            <a href="/Dashboard" class="btn btn-success btn-lg me-3">Open Dashboard</a>
+            <button class="btn btn-outline-primary btn-lg" style="border: 2px solid #007AFF; color: #007AFF; background: transparent;">User Manual</button>
+        </div>
+    </div>
 </div>
