@@ -1,0 +1,254 @@
+﻿@page
+@model DrowsinessDetectionApp.Pages.Dashboard.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h1 class="h2 mb-0" style="font-size: 2.5rem; font-weight: 600; color: #1d1d1f;">Driver Monitoring Dashboard</h1>
+            <p style="color: #86868b; font-size: 1.1rem; margin: 0;">Real-time drowsiness detection and safety monitoring</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="connection-status">
+                <span class="badge bg-danger" id="connectionStatus">ESP32 Disconnected</span>
+                <span class="badge bg-secondary ms-2" id="sessionStatus">Session Inactive</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Real-time Monitoring Panel -->
+<div class="container mb-4">
+    <div class="row">
+        <!-- Eye Blink Rate -->
+        <div class="col-md-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 24px;">
+                    <h6 class="card-title" style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Eye Blink Rate</h6>
+                    <h2 class="text-primary" id="blinkRate" style="font-size: 2rem; font-weight: 600; margin-bottom: 16px;">-- BPM</h2>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" id="blinkRateBar" style="width: 0%"></div>
+                    </div>
+                    <small style="color: #86868b;">Normal: 15-20 BPM</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drowsiness Level -->
+        <div class="col-md-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 24px;">
+                    <h6 class="card-title" style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Drowsiness Level</h6>
+                    <h2 class="text-warning" id="drowsinessLevel" style="font-size: 2rem; font-weight: 600; margin-bottom: 16px;">--%</h2>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-warning" id="drowsinessBar" style="width: 0%"></div>
+                    </div>
+                    <small style="color: #86868b;">Alert at 70%</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Head Movement -->
+        <div class="col-md-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 24px;">
+                    <h6 class="card-title" style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Head Movement</h6>
+                    <div class="row">
+                        <div class="col-4">
+                            <small style="color: #86868b;">Pitch</small>
+                            <div class="fw-bold" id="pitchValue" style="color: #1d1d1f; font-size: 1.1rem;">--°</div>
+                        </div>
+                        <div class="col-4">
+                            <small style="color: #86868b;">Roll</small>
+                            <div class="fw-bold" id="rollValue" style="color: #1d1d1f; font-size: 1.1rem;">--°</div>
+                        </div>
+                        <div class="col-4">
+                            <small style="color: #86868b;">Yaw</small>
+                            <div class="fw-bold" id="yawValue" style="color: #1d1d1f; font-size: 1.1rem;">--°</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Status -->
+        <div class="col-md-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center" style="padding: 24px;">
+                    <h6 class="card-title" style="font-weight: 600; color: #1d1d1f; margin-bottom: 16px;">Alert Status</h6>
+                    <div class="alert-status" id="alertStatus">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                        <div class="mt-2" style="color: #1d1d1f; font-weight: 500;">All Clear</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Data Visualization -->
+<div class="container mb-4">
+    <div class="row">
+        <!-- Real-time Chart -->
+        <div class="col-md-8 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0" style="font-weight: 600; color: #1d1d1f;">Real-time Drowsiness Monitoring</h5>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <canvas id="drowsinessChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Statistics -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0" style="font-weight: 600; color: #1d1d1f;">Session Statistics</h5>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #86868b;">Session Duration:</span>
+                            <strong id="sessionDuration" style="color: #1d1d1f;">00:00:00</strong>
+                        </div>
+                    </div>
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #86868b;">Total Alerts:</span>
+                            <strong id="totalAlerts" style="color: #1d1d1f;">0</strong>
+                        </div>
+                    </div>
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #86868b;">Avg Blink Rate:</span>
+                            <strong id="avgBlinkRate" style="color: #1d1d1f;">-- BPM</strong>
+                        </div>
+                    </div>
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #86868b;">Peak Drowsiness:</span>
+                            <strong id="peakDrowsiness" style="color: #1d1d1f;">--%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Status Panel -->
+<div class="container mb-4">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">🔋 Device Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="device-status-item mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Battery Level:</span>
+                                    <strong id="batteryLevel">--%</strong>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" id="batteryBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="device-status-item mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span>Signal Strength:</span>
+                                    <strong id="signalStrength">-- dBm</strong>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-info" id="signalBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="device-status-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Last Data Received:</span>
+                            <strong id="lastDataTime">Never</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session History -->
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 Recent Sessions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="session-history" id="sessionHistory">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-history fa-2x mb-2"></i>
+                            <p>No previous sessions found</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Panel -->
+<div class="container mb-4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">⚙️ Settings & Configuration</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6>Alert Thresholds</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Drowsiness Alert Level:</label>
+                        <input type="range" class="form-range" id="drowsinessThreshold" min="0" max="100" value="70">
+                        <div class="text-center">
+                            <span id="thresholdValue">70%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6>Blink Rate Settings</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Normal Blink Rate:</label>
+                        <input type="range" class="form-range" id="normalBlinkRate" min="10" max="30" value="17">
+                        <div class="text-center">
+                            <span id="normalBlinkValue">17 BPM</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6>Export Options</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Export Format:</label>
+                        <select class="form-select" id="exportFormat">
+                            <option value="pdf">PDF Report</option>
+                            <option value="csv">CSV Data</option>
+                            <option value="txt">Text Summary</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/css/Dashboard.css" asp-append-version="true" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/Dashboard.js"></script>
+}
