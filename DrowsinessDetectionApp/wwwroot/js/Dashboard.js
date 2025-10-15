@@ -1,5 +1,25 @@
-﻿// Dashboard JavaScript - Skeleton for ESP32 integration
-// This file will handle real-time data updates and ESP32 communication
+﻿// Dashboard JavaScript - Real-time ESP32 integration with SignalR
+
+// SignalR connection setup
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl("/sensorHub")
+    .withAutomaticReconnect()
+    .build();
+
+connection.on("ReceiveSensorData", function (data) {
+    if (isSessionActive) {
+        // Convert ESP32 timestamp (milliseconds since boot) to Date
+        data.timestamp = new Date(data.Timestamp);
+        processSensorData(data); // Process the received data
+    }
+});
+
+connection.start()
+    .then(() => {
+        console.log("Connected to SignalR hub");
+        updateConnectionStatus(true);
+    })
+    .catch(err => console.error("SignalR Connection Error: ", err));
 
 // Global variables for dashboard state
 let isSessionActive = false;
@@ -103,9 +123,6 @@ function startSession() {
     updateSessionControls(true);
 
     console.log('Session started at:', sessionStartTime);
-
-    // TODO: Connect to ESP32 via WebSocket/SignalR
-    // connectToESP32();
 }
 
 // Stop monitoring session
@@ -219,30 +236,14 @@ function updateBlinkRate() {
     document.getElementById('normalBlinkValue').textContent = value + ' BPM';
 }
 
-// Simulate ESP32 data reception (for testing)
-function simulateESP32Data() {
-    if (!isSessionActive) return;
-
-    const mockData = {
-        timestamp: new Date(),
-        eyeBlinkRate: 15 + Math.random() * 10,
-        eyeClosureDuration: Math.random() * 2,
-        headMovement: {
-            pitch: (Math.random() - 0.5) * 20,
-            roll: (Math.random() - 0.5) * 20,
-            yaw: (Math.random() - 0.5) * 20
-        },
-        drowsinessLevel: Math.random() * 100,
-        alertTriggered: false,
-        batteryLevel: 85 + Math.random() * 15
-    };
-
-    // Process received data
-    processSensorData(mockData);
-}
-
 // Process sensor data from ESP32
 function processSensorData(data) {
+    // Validate data
+    if (!data || !data.headMovement || typeof data.eyeBlinkRate !== 'number' || typeof data.drowsinessLevel !== 'number') {
+        console.error('Invalid sensor data:', data);
+        return;
+    }
+
     // Store data for session
     sessionData.push(data);
 
@@ -321,9 +322,6 @@ function triggerAlert(data) {
     // Update alert status display
     const alertStatus = document.getElementById('alertStatus');
     alertStatus.innerHTML = '<i class="fas fa-exclamation-triangle fa-2x text-danger"></i><div class="mt-2">Drowsiness Alert!</div>';
-
-    // Play alert sound (if enabled)
-    // playAlertSound();
 
     console.log('Drowsiness alert triggered at', data.drowsinessLevel.toFixed(1) + '%');
 }
