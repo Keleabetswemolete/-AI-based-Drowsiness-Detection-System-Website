@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.SignalR;
+using DrowsinessDetectionApp.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -21,5 +24,7 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapRazorPages();
+app.MapControllers();
+app.MapHub<SensorHub>("/sensorHub");
 
 app.Run();
