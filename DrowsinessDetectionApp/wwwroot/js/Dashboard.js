@@ -82,10 +82,14 @@ function setupEventListeners() {
     document.getElementById('startSessionBtn').addEventListener('click', startSession);
     document.getElementById('stopSessionBtn').addEventListener('click', stopSession);
     document.getElementById('exportBtn').addEventListener('click', exportSessionData);
+    document.getElementById('previewBtn').addEventListener('click', previewSessionData);
 
     // Settings sliders
     document.getElementById('drowsinessThreshold').addEventListener('input', updateThreshold);
     document.getElementById('normalBlinkRate').addEventListener('input', updateBlinkRate);
+    
+    // Export format change
+    document.getElementById('exportFormat').addEventListener('change', updateExportButtons);
 }
 
 // Start monitoring session
@@ -117,6 +121,11 @@ function stopSession() {
 
 // Export session data
 function exportSessionData() {
+    if (sessionData.length === 0) {
+        alert('No session data available to export. Please start a session first.');
+        return;
+    }
+
     const format = document.getElementById('exportFormat').value;
 
     switch (format) {
@@ -130,6 +139,41 @@ function exportSessionData() {
             generateTextSummary();
             break;
     }
+}
+
+// Preview session data
+function previewSessionData() {
+    if (sessionData.length === 0) {
+        alert('No session data available to preview. Please start a session first.');
+        return;
+    }
+
+    const format = document.getElementById('exportFormat').value;
+    let previewContent = '';
+
+    switch (format) {
+        case 'csv':
+            previewContent = generateCSVContent();
+            break;
+        case 'txt':
+            previewContent = generateTextContent();
+            break;
+        case 'pdf':
+            alert('PDF preview is not available. Please use CSV or Text format for preview.');
+            return;
+    }
+
+    // Show preview in a modal or new window
+    showPreviewModal(previewContent, format);
+}
+
+// Update export buttons based on data availability
+function updateExportButtons() {
+    const hasData = sessionData.length > 0;
+    const format = document.getElementById('exportFormat').value;
+    
+    document.getElementById('exportBtn').disabled = !hasData;
+    document.getElementById('previewBtn').disabled = !hasData || format === 'pdf';
 }
 
 // Update connection status indicator
@@ -160,7 +204,7 @@ function updateSessionStatus(isActive) {
 function updateSessionControls(isActive) {
     document.getElementById('startSessionBtn').disabled = isActive;
     document.getElementById('stopSessionBtn').disabled = !isActive;
-    document.getElementById('exportBtn').disabled = !isActive || sessionData.length === 0;
+    updateExportButtons();
 }
 
 // Update drowsiness threshold setting
@@ -311,25 +355,190 @@ function updateSessionStatistics() {
     document.getElementById('peakDrowsiness').textContent = peakDrowsiness.toFixed(1) + '%';
 }
 
-// Generate PDF report (placeholder)
+// Generate PDF report using jsPDF
 function generatePDFReport() {
     console.log('Generating PDF report...');
-    // TODO: Implement PDF generation using jsPDF or server-side generation
-    alert('PDF export functionality will be implemented with server-side PDF generation');
+    
+    // Import jsPDF dynamically
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(20);
+        doc.text('Drowsiness Detection Session Report', 20, 30);
+        
+        // Add session info
+        doc.setFontSize(12);
+        doc.text(`Session Date: ${sessionStartTime.toLocaleDateString()}`, 20, 50);
+        doc.text(`Session Duration: ${document.getElementById('sessionDuration').textContent}`, 20, 60);
+        doc.text(`Total Alerts: ${totalAlerts}`, 20, 70);
+        doc.text(`Data Points: ${sessionData.length}`, 20, 80);
+        
+        // Add statistics
+        if (sessionData.length > 0) {
+            const avgBlinkRate = sessionData.reduce((sum, data) => sum + data.eyeBlinkRate, 0) / sessionData.length;
+            const peakDrowsiness = Math.max(...sessionData.map(data => data.drowsinessLevel));
+            
+            doc.text(`Average Blink Rate: ${avgBlinkRate.toFixed(1)} BPM`, 20, 100);
+            doc.text(`Peak Drowsiness: ${peakDrowsiness.toFixed(1)}%`, 20, 110);
+        }
+        
+        // Add data table
+        doc.text('Session Data:', 20, 130);
+        let yPos = 140;
+        
+        // Table headers
+        doc.setFontSize(10);
+        doc.text('Time', 20, yPos);
+        doc.text('Blink Rate', 50, yPos);
+        doc.text('Drowsiness %', 80, yPos);
+        doc.text('Pitch', 110, yPos);
+        doc.text('Roll', 130, yPos);
+        doc.text('Yaw', 150, yPos);
+        doc.text('Alert', 170, yPos);
+        yPos += 10;
+        
+        // Add data rows (limit to fit page)
+        const maxRows = Math.min(sessionData.length, 20);
+        for (let i = 0; i < maxRows; i++) {
+            const data = sessionData[i];
+            doc.text(data.timestamp.toLocaleTimeString(), 20, yPos);
+            doc.text(data.eyeBlinkRate.toFixed(1), 50, yPos);
+            doc.text(data.drowsinessLevel.toFixed(1), 80, yPos);
+            doc.text(data.headMovement.pitch.toFixed(1), 110, yPos);
+            doc.text(data.headMovement.roll.toFixed(1), 130, yPos);
+            doc.text(data.headMovement.yaw.toFixed(1), 150, yPos);
+            doc.text(data.alertTriggered ? 'Yes' : 'No', 170, yPos);
+            yPos += 6;
+        }
+        
+        // Download the PDF
+        const fileName = `drowsiness_report_${sessionStartTime.toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+    };
+    document.head.appendChild(script);
 }
 
-// Generate CSV export (placeholder)
+// Generate CSV export
 function generateCSVExport() {
     console.log('Generating CSV export...');
-    // TODO: Implement CSV generation
-    alert('CSV export functionality will be implemented');
+    
+    const csvContent = generateCSVContent();
+    downloadFile(csvContent, `drowsiness_data_${sessionStartTime.toISOString().split('T')[0]}.csv`, 'text/csv');
 }
 
-// Generate text summary (placeholder)
+// Generate CSV content
+function generateCSVContent() {
+    const headers = ['Timestamp', 'Blink Rate (BPM)', 'Drowsiness Level (%)', 'Pitch (°)', 'Roll (°)', 'Yaw (°)', 'Alert Triggered', 'Battery Level (%)'];
+    const csvRows = [headers.join(',')];
+    
+    sessionData.forEach(data => {
+        const row = [
+            data.timestamp.toISOString(),
+            data.eyeBlinkRate.toFixed(2),
+            data.drowsinessLevel.toFixed(2),
+            data.headMovement.pitch.toFixed(2),
+            data.headMovement.roll.toFixed(2),
+            data.headMovement.yaw.toFixed(2),
+            data.alertTriggered ? 'Yes' : 'No',
+            data.batteryLevel.toFixed(1)
+        ];
+        csvRows.push(row.join(','));
+    });
+    
+    return csvRows.join('\n');
+}
+
+// Generate text summary
 function generateTextSummary() {
     console.log('Generating text summary...');
-    // TODO: Implement text summary generation
-    alert('Text summary functionality will be implemented');
+    
+    const textContent = generateTextContent();
+    downloadFile(textContent, `drowsiness_summary_${sessionStartTime.toISOString().split('T')[0]}.txt`, 'text/plain');
+}
+
+// Generate text content
+function generateTextContent() {
+    let content = 'DROWSINESS DETECTION SESSION SUMMARY\n';
+    content += '=====================================\n\n';
+    
+    content += `Session Date: ${sessionStartTime.toLocaleDateString()}\n`;
+    content += `Session Time: ${sessionStartTime.toLocaleTimeString()}\n`;
+    content += `Session Duration: ${document.getElementById('sessionDuration').textContent}\n`;
+    content += `Total Data Points: ${sessionData.length}\n`;
+    content += `Total Alerts: ${totalAlerts}\n\n`;
+    
+    if (sessionData.length > 0) {
+        const avgBlinkRate = sessionData.reduce((sum, data) => sum + data.eyeBlinkRate, 0) / sessionData.length;
+        const peakDrowsiness = Math.max(...sessionData.map(data => data.drowsinessLevel));
+        const avgDrowsiness = sessionData.reduce((sum, data) => sum + data.drowsinessLevel, 0) / sessionData.length;
+        
+        content += 'STATISTICS\n';
+        content += '----------\n';
+        content += `Average Blink Rate: ${avgBlinkRate.toFixed(2)} BPM\n`;
+        content += `Average Drowsiness Level: ${avgDrowsiness.toFixed(2)}%\n`;
+        content += `Peak Drowsiness Level: ${peakDrowsiness.toFixed(2)}%\n\n`;
+        
+        content += 'DETAILED DATA\n';
+        content += '-------------\n';
+        content += 'Time\t\tBlink Rate\tDrowsiness\tPitch\tRoll\tYaw\tAlert\n';
+        content += '----\t\t----------\t----------\t-----\t----\t---\t-----\n';
+        
+        sessionData.forEach(data => {
+            content += `${data.timestamp.toLocaleTimeString()}\t${data.eyeBlinkRate.toFixed(1)}\t\t${data.drowsinessLevel.toFixed(1)}%\t\t${data.headMovement.pitch.toFixed(1)}°\t${data.headMovement.roll.toFixed(1)}°\t${data.headMovement.yaw.toFixed(1)}°\t${data.alertTriggered ? 'Yes' : 'No'}\n`;
+        });
+    }
+    
+    return content;
+}
+
+// Download file utility function
+function downloadFile(content, fileName, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+}
+
+// Show preview modal
+function showPreviewModal(content, format) {
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Preview ${format.toUpperCase()} Export</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <pre style="max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 5px;">${content}</pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="exportSessionData(); bootstrap.Modal.getInstance(this.closest('.modal')).hide();">Download</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // Remove modal when hidden
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
 }
 
 // TODO: Implement WebSocket/SignalR connection to ESP32

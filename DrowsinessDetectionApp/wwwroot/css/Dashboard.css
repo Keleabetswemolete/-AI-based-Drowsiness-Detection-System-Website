@@ -116,6 +116,21 @@
     animation: pulse 0.5s ease-in-out;
 }
 
+/* Session controls */
+.session-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.session-controls .btn {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
 /* Dashboard responsive design */
 @media (max-width: 768px) {
     .dashboard-header .row {
@@ -125,5 +140,10 @@
     .dashboard-header .text-end {
         text-align: center !important;
         margin-top: 20px;
+    }
+    
+    .session-controls {
+        justify-content: center;
+        margin-top: 15px;
     }
 }
