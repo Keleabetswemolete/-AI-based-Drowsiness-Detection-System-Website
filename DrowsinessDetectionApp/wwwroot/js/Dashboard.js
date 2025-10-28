@@ -1,4 +1,4 @@
-﻿// Dashboard JavaScript - Real-time ESP32 integration with SignalR
+// Dashboard JavaScript - Real-time ESP32 integration with SignalR
 
 // SignalR connection setup
 const connection = new signalR.HubConnectionBuilder()
@@ -28,11 +28,189 @@ let drowsinessChart = null;
 let totalAlerts = 0;
 let sessionData = [];
 
+// Simulation state
+let simulatorIntervalId = null;
+let simulatorState = {
+    lastBlinkMs: 0,
+    blinkIntervalMs: 3000,
+    batteryLevel: 100,
+    tiltCooldown: 0, // ticks remaining with high tilt
+    baseTilt: { pitch: 0, roll: 0, yaw: 0 }
+};
+
+function resetChart() {
+    if (!drowsinessChart) return;
+    drowsinessChart.data.labels = [];
+    drowsinessChart.data.datasets[0].data = [];
+    drowsinessChart.data.datasets[1].data = [];
+    drowsinessChart.update('none');
+}
+
+let recentSessions = [];
+
+function loadRecentSessions() {
+    try {
+        const raw = localStorage.getItem('recentSessions');
+        recentSessions = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(recentSessions)) recentSessions = [];
+    } catch (_) {
+        recentSessions = [];
+    }
+}
+
+function saveRecentSession() {
+    if (!sessionStartTime || sessionData.length === 0) return;
+    const endTime = new Date();
+    const durationMs = endTime - sessionStartTime;
+    const avgBlink = sessionData.reduce((s, d) => s + d.eyeBlinkRate, 0) / sessionData.length;
+    const peakDrowsy = Math.max(...sessionData.map(d => d.drowsinessLevel));
+    const summary = {
+        start: sessionStartTime.toISOString(),
+        end: endTime.toISOString(),
+        durationMs: durationMs,
+        totalAlerts: totalAlerts,
+        avgBlinkRate: Number.isFinite(avgBlink) ? avgBlink : 0,
+        peakDrowsiness: Number.isFinite(peakDrowsy) ? peakDrowsy : 0,
+        points: sessionData.length
+    };
+    recentSessions.unshift(summary);
+    recentSessions = recentSessions.slice(0, 10);
+    try {
+        localStorage.setItem('recentSessions', JSON.stringify(recentSessions));
+    } catch (_) {}
+}
+
+function renderRecentSessions() {
+    const container = document.getElementById('sessionHistory');
+    if (!container) return;
+    if (!recentSessions || recentSessions.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-history fa-2x mb-2"></i><p>No previous sessions found</p></div>';
+        return;
+    }
+    const items = recentSessions.map(s => {
+        const dur = formatDuration(s.durationMs);
+        const date = new Date(s.start).toLocaleString();
+        return `<div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div>
+                <div class=\"fw-semibold\">${date}</div>
+                <div class=\"text-muted small\">Duration: ${dur} • Points: ${s.points}</div>
+            </div>
+            <div class=\"text-end\">
+                <div class=\"small\">Alerts: <strong>${s.totalAlerts}</strong></div>
+                <div class=\"small\">Avg Blink: ${s.avgBlinkRate.toFixed(1)} BPM • Peak Drowsy: ${s.peakDrowsiness.toFixed(1)}%</div>
+            </div>
+        </div>`;
+    }).join('');
+    container.innerHTML = items;
+}
+
+function formatDuration(ms) {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const hh = h.toString().padStart(2, '0');
+    const mm = m.toString().padStart(2, '0');
+    const ss = s.toString().padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+}
+
+// ---------------------------
+// Simulation (client-side)
+// ---------------------------
+function startSimulator() {
+    if (simulatorIntervalId) return;
+    simulatorState.lastBlinkMs = performance.now();
+    simulatorState.batteryLevel = 100;
+    simulatorState.tiltCooldown = 0;
+    simulatorState.baseTilt = { pitch: 0, roll: 0, yaw: 0 };
+
+    // Run the simulator every 2 seconds to slow visual updates
+    simulatorIntervalId = setInterval(simulatorTick, 2000);
+}
+
+function stopSimulator() {
+    if (simulatorIntervalId) {
+        clearInterval(simulatorIntervalId);
+        simulatorIntervalId = null;
+    }
+}
+
+function simulatorTick() {
+    if (!isSessionActive) return;
+
+    const now = new Date();
+    const nowMs = performance.now();
+
+    // Blink every 3 seconds (approx 20 BPM)
+    let eyeClosedThisTick = false;
+    if (nowMs - simulatorState.lastBlinkMs >= simulatorState.blinkIntervalMs) {
+        simulatorState.lastBlinkMs = nowMs;
+        eyeClosedThisTick = true; // represent a blink event at this tick
+    }
+
+    // Head movement: small noise + less frequent spikes > 30°
+    if (simulatorState.tiltCooldown === 0 && Math.random() < 0.08) {
+        // cooldown is in ticks; with 2s per tick this is ~4-6 seconds
+        simulatorState.tiltCooldown = 2 + Math.floor(Math.random() * 2); // 2-3 ticks
+        // create a spike on one axis
+        const axis = ['pitch','roll','yaw'][Math.floor(Math.random()*3)];
+        simulatorState.baseTilt[axis] = (Math.random() < 0.5 ? 1 : -1) * (30 + Math.random() * 20); // 30-50°
+    } else if (simulatorState.tiltCooldown > 0) {
+        simulatorState.tiltCooldown--;
+        if (simulatorState.tiltCooldown === 0) {
+            simulatorState.baseTilt = { pitch: 0, roll: 0, yaw: 0 };
+        }
+    }
+
+    const headMovement = {
+        pitch: simulatorState.baseTilt.pitch + (Math.random() - 0.5) * 4,
+        roll: simulatorState.baseTilt.roll + (Math.random() - 0.5) * 4,
+        yaw: simulatorState.baseTilt.yaw + (Math.random() - 0.5) * 4
+    };
+
+    const tiltExceeded = Math.max(
+        Math.abs(headMovement.pitch),
+        Math.abs(headMovement.roll),
+        Math.abs(headMovement.yaw)
+    ) > 30;
+
+    // Eye blink rate: baseline ~17 BPM, spike to ~20 BPM when blink occurs
+    const baselineBlink = 15 + Math.random() * 6; // 15-21 BPM
+    const eyeBlinkRate = eyeClosedThisTick ? 20 : baselineBlink;
+
+    // Drowsiness heuristic: base 35-50, increase on blink event and tilt exceedance
+    let drowsinessLevel = 35 + Math.random() * 15; // 35-50
+    if (eyeClosedThisTick) drowsinessLevel += 20 + Math.random() * 10; // +20-30
+    if (tiltExceeded) drowsinessLevel += 20 + Math.random() * 15; // +20-35
+    drowsinessLevel = Math.max(0, Math.min(100, drowsinessLevel));
+
+    // Battery level decay
+    simulatorState.batteryLevel = Math.max(5, simulatorState.batteryLevel - (0.15 + Math.random() * 0.1));
+
+    // Determine alert based on current threshold
+    const threshold = parseInt(document.getElementById('drowsinessThreshold').value);
+    const alertTriggered = drowsinessLevel >= threshold || tiltExceeded;
+
+    const simulated = {
+        timestamp: now,
+        eyeBlinkRate: eyeBlinkRate,
+        eyeClosureDuration: eyeClosedThisTick ? 0.2 : 0.0, // approx seconds closed within this tick
+        headMovement: headMovement,
+        drowsinessLevel: drowsinessLevel,
+        alertTriggered: alertTriggered,
+        batteryLevel: simulatorState.batteryLevel
+    };
+
+    processSensorData(simulated);
+}
+
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', function () {
     initializeDashboard();
     initializeChart();
     setupEventListeners();
+    loadRecentSessions();
+    renderRecentSessions();
 });
 
 // Initialize dashboard components
@@ -123,6 +301,28 @@ function startSession() {
     updateSessionControls(true);
 
     console.log('Session started at:', sessionStartTime);
+
+    // For demo: mark connection as available and start simulator
+    updateConnectionStatus(true);
+    startSimulator();
+
+    resetChart();
+    document.getElementById('blinkRate').textContent = '-- BPM';
+    document.getElementById('blinkRateBar').style.width = '0%';
+    document.getElementById('drowsinessLevel').textContent = '--%';
+    document.getElementById('drowsinessBar').style.width = '0%';
+    document.getElementById('pitchValue').textContent = '--°';
+    document.getElementById('rollValue').textContent = '--°';
+    document.getElementById('yawValue').textContent = '--°';
+    document.getElementById('batteryLevel').textContent = '--%';
+    document.getElementById('batteryBar').style.width = '0%';
+    document.getElementById('lastDataTime').textContent = 'Never';
+    document.getElementById('totalAlerts').textContent = '0';
+    document.getElementById('sessionDuration').textContent = '00:00:00';
+    document.getElementById('avgBlinkRate').textContent = '-- BPM';
+    document.getElementById('peakDrowsiness').textContent = '--%';
+    clearAlert();
+    updateExportButtons();
 }
 
 // Stop monitoring session
@@ -134,6 +334,12 @@ function stopSession() {
 
     console.log('Session ended. Total alerts:', totalAlerts);
     console.log('Session data points:', sessionData.length);
+
+    // Stop simulator when session stops
+    stopSimulator();
+
+    saveRecentSession();
+    renderRecentSessions();
 }
 
 // Export session data
@@ -305,9 +511,8 @@ function updateChart(data) {
 
 // Check for drowsiness alerts
 function checkForAlerts(data) {
-    const threshold = parseInt(document.getElementById('drowsinessThreshold').value);
-
-    if (data.drowsinessLevel >= threshold) {
+    // Use the computed alert flag (covers drowsiness threshold and >30° tilt)
+    if (data.alertTriggered) {
         triggerAlert(data);
     } else {
         clearAlert();
